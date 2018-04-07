@@ -1,0 +1,7 @@
+<service>
+	<serviceName>cupones</serviceName>
+	<serviceDescription>Aplicar cupones y ganar excelentes premios.</serviceDescription>
+	<creatorEmail>salvi@apretaste.com</creatorEmail>
+	<serviceCategory>otros</serviceCategory>
+	<listed>1</listed>
+</service>
