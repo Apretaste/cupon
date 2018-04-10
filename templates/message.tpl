@@ -6,5 +6,5 @@
 
 	{space10}
 
-	{button href="CUPONES CANJEAR" popup="true" desc="Agregue el cupon a canjear*" caption="Nuevo cupon"}
+	{button href="CUPONES CANJEAR" popup="true" desc="Escriba el cupon a canjear*" caption="Canjear"}
 </center>
