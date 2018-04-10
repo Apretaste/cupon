@@ -95,7 +95,7 @@ class Cupones extends Service
 		// offer rewards response
 		$content = [
 			"header"=>"&iexcl;Felicidades!",
-			"icon"=>"&#x1F64D;",
+			"icon"=>"&#x1F64B;",
 			"text" => "Su cupon se ha canjeado correctamente y usted ha ganado <b>&sect;$credits en creditos de Apretaste</b>. Gracias por canjear su cupon."
 		];
 
@@ -105,7 +105,7 @@ class Cupones extends Service
 		// return response
 		display:
 		$response = new Response();
-		$response->createFromTemplate("message.tpl", ["content"=>$content]);
+		$response->createFromTemplate("message.tpl", $content);
 		return $response;
 	}
 }

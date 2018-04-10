@@ -1,6 +1,6 @@
-<h1>{$header}</h1>
-
 <center>
+	<h1 style="text-transform:uppercase;">{$header}</h1>
+
 	<div style="color:grey; font-size:80px; margin:20px 0px;" class="emogi">{$icon}</div>
 	<p>{$text}</p>
 
