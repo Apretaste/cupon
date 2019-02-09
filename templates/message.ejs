@@ -1,11 +1,13 @@
-<div class="col s12 center-align">
-	<h1><%= header %></h1>
+<div class="row">
+	<div class="col s12 center-align">
+		<h1><%= header %></h1>
+		<i class="large material-icons"><%= icon %></i>
+		<p style="margin:30px 0px;"><%= text %></p>
 
-	<i class="large material-icons"><%= icon %></i>
-
-	<p style="margin:30px 0px;"><%= text %></p>
-
-	<a class="waves-effect waves-light btn fullscreen" href="#!" onclick="apretaste.send({'command':'CUPONES'});">
-		Canjear Otro
-	</a>
+		<div class="input-field">
+			<a class="waves-effect waves-light btn" href="#!" onclick="apretaste.send({'command':'CUPONES'});">
+				Canjear Otro
+			</a>
+		</div>
+	</div>
 </div>
