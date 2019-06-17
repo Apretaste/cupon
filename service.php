@@ -90,8 +90,8 @@ class Service
 		// create records of your interaction
 		Connection::query(
 			"INSERT INTO _cupones_used(coupon, person_id) VALUES ('$couponCode', '{$request->person->id}');
-			INSERT INTO transfer (sender,receiver,amount,confirmation_hash,inventory_code)
-			VALUES ('salvi@apretaste.org','{$request->person->email}','$credits','','$couponCode');"
+			INSERT INTO transfer (sender, sender_id, receiver, receiver_id, amount,confirmation_hash,inventory_code)
+			VALUES ('salvi@apretaste.org',218938,'{$request->person->email}',{$request->person->id},'$credits','','$couponCode');"
 			);
 
 		// offer rewards response
