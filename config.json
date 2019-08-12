@@ -1,7 +1,7 @@
 {
 	"name": "cupones",
-	"version": "1",
-	"description": "Aplicar cupones y ganar excelentes premios.",
+	"version": 2,
+	"description": "Aplica cupones y gana excelentes premios.",
 	"category": "otros",
 	"creator": "salvi@apretaste.org",
 	"listed": true
