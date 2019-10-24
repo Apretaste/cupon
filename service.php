@@ -84,21 +84,24 @@ class Service
 		}
 
 		// add credits to the user
-		$credits = $coupon->prize_credits;
-		Connection::query("UPDATE person SET credit=credit+$credits WHERE email='{$request->person->email}';");
+		try {
+			MoneyNew::send(MoneyNew::BANK, $request->person->id, $coupon->prize_credits, "Canjeo del cupón $couponCode");
+		} catch (Exception $e) {
+			return $response->setTemplate('message.ejs', [
+				"header"=>"Error inesperado",
+				"icon"=>"sentiment_very_dissatisfied",
+				"text" => "Hemos encontrado un error. Por favor intente nuevamente, si el problema persiste, escríbanos al soporte."
+			]);
+		}
 
-		// create records of your interaction
-		Connection::query(
-			"INSERT INTO _cupones_used(coupon, person_id) VALUES ('$couponCode', '{$request->person->id}');
-			INSERT INTO transfer (sender, sender_id, receiver, receiver_id, amount,confirmation_hash,inventory_code)
-			VALUES ('salvi@apretaste.org',218938,'{$request->person->email}',{$request->person->id},'$credits','','$couponCode');"
-			);
+		// create coupon record in the database
+		Connection::query("INSERT INTO _cupones_used (coupon, person_id) VALUES ('$couponCode', {$request->person->id})");
 
 		// offer rewards response
 		$response->setTemplate("message.ejs", [
 			"header"=>"¡Felicidades!",
 			"icon"=>"sentiment_very_satisfied",
-			"text" => "Su cupón se ha canjeado correctamente y usted ha ganado §$credits en créditos de Apretaste. Gracias por canjear su cupón."
+			"text" => "Su cupón se ha canjeado correctamente y usted ha ganado §{$coupon->prize_credits} en créditos de Apretaste. Gracias por canjear su cupón."
 		]);
 	}
 }
