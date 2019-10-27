@@ -103,5 +103,7 @@ class Service
 			"icon"=>"sentiment_very_satisfied",
 			"text" => "Su cupón se ha canjeado correctamente y usted ha ganado §{$coupon->prize_credits} en créditos de Apretaste. Gracias por canjear su cupón."
 		]);
+
+		Challenges::complete('cupon', $request->person-id);
 	}
 }
