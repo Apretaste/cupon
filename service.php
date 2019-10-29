@@ -29,7 +29,7 @@ class Service
 		$coupon = Connection::query("SELECT * FROM _cupones WHERE coupon = '$couponCode' AND active=1");
 
 		// check if coupon cannot be found
-		if(empty($coupon)) {
+		if (empty($coupon)) {
 			return $response->setTemplate("message.ejs", [
 				"header"=>"El cupón no existe",
 				"icon"=>"sentiment_very_dissatisfied",
@@ -39,7 +39,7 @@ class Service
 
 		// check if the coupon has been used already by the user
 		$used = Connection::query("SELECT COUNT(id) AS used FROM _cupones_used WHERE person_id='{$request->person->id}' AND coupon='$couponCode'")[0]->used;
-		if($used) {
+		if ($used) {
 			return $response->setTemplate("message.ejs", [
 				"header"=>"El cupón ya fue usado",
 				"icon"=>"sentiment_very_dissatisfied",
@@ -49,9 +49,9 @@ class Service
 
 		// check if the coupon reached the usage limit
 		$coupon = $coupon[0];
-		if($coupon->rule_limit) {
+		if ($coupon->rule_limit) {
 			$cnt = Connection::query("SELECT COUNT(id) AS cnt FROM _cupones_used WHERE coupon='$couponCode'")[0]->cnt;
-			if($coupon->rule_limit <= $cnt) {
+			if ($coupon->rule_limit <= $cnt) {
 				return $response->setTemplate("message.ejs", [
 					"header"=>"El cupón alcanzo su máximo",
 					"icon"=>"sentiment_very_dissatisfied",
@@ -61,9 +61,9 @@ class Service
 		}
 
 		// check if the new user rule can be applied
-		if($coupon->rule_new_user) {
+		if ($coupon->rule_new_user) {
 			$newUser = Connection::query("SELECT COUNT(email) AS newuser FROM person WHERE email = '{$request->person->email}' AND DATEDIFF(NOW(), insertion_date) < 3")[0]->newuser;
-			if( ! $newUser) {
+			if (! $newUser) {
 				return $response->setTemplate("message.ejs", [
 					"header"=>"El cupón no aplica",
 					"icon"=>"sentiment_very_dissatisfied",
@@ -73,8 +73,8 @@ class Service
 		}
 
 		// check if the deadline rule can be applied
-		if($coupon->rule_deadline) {
-			if(date('Y-m-d') > date('Y-m-d', strtotime($coupon->rule_deadline))) {
+		if ($coupon->rule_deadline) {
+			if (date('Y-m-d') > date('Y-m-d', strtotime($coupon->rule_deadline))) {
 				return $response->setTemplate("message.ejs", [
 					"header"=>"El cupón ha expirado",
 					"icon"=>"sentiment_very_dissatisfied",
