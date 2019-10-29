@@ -97,13 +97,17 @@ class Service
 		// create coupon record in the database
 		Connection::query("INSERT INTO _cupones_used (coupon, person_id) VALUES ('$couponCode', {$request->person->id})");
 
+		// add the experience
+		Level::setExperience('COUPON_EXCHANGE', $request->person->id);
+
+		// complete the challenge
+		Challenges::complete('cupon', $request->person->id);
+
 		// offer rewards response
 		$response->setTemplate("message.ejs", [
 			"header"=>"¡Felicidades!",
 			"icon"=>"sentiment_very_satisfied",
 			"text" => "Su cupón se ha canjeado correctamente y usted ha ganado §{$coupon->prize_credits} en créditos de Apretaste. Gracias por canjear su cupón."
 		]);
-
-		Challenges::complete('cupon', $request->person->id);
 	}
 }
