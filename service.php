@@ -83,6 +83,9 @@ class Service
 			}
 		}
 
+		// duplicate if you are topacio level or higer
+		if($request->person->level >= Level::TOPACIO) $coupon->prize_credits *= 2;
+
 		// add credits to the user
 		try {
 			MoneyNew::send(MoneyNew::BANK, $request->person->id, $coupon->prize_credits, "Canjeo del cupón $couponCode");
