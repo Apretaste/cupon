@@ -86,6 +86,16 @@ class Service
 		// duplicate if you are topacio level or higer
 		if($request->person->level >= Level::TOPACIO) $coupon->prize_credits *= 2;
 
+		// run powers for amulet CUPONESX2
+		if(Amulets::isActive(Amulets::CUPONESX2, $request->person->id)) {
+			// duplicate the amount
+			$coupon->prize_credits *= 2;
+
+			// notify the user
+			$msg = "Los poderes del amuleto del Druida duplicaron el valor del cupón $couponCode";
+			Utils::addNotification($request->person->id, $msg, '{command:"CREDITO"}}', 'filter_2');
+		}
+
 		// add credits to the user
 		try {
 			MoneyNew::send(MoneyNew::BANK, $request->person->id, $coupon->prize_credits, "Canjeo del cupón $couponCode");
