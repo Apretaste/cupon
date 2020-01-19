@@ -2,19 +2,17 @@
 
 use Apretaste\Notifications;
 use Apretaste\Money;
-use Apretaste\Person;
 use Apretaste\Request;
 use Apretaste\Response;
 use Framework\Database;
 use Apretaste\Challenges;
-
 
 class Service
 {
 	/**
 	 * Main function
 	 *
-	 * @param \Apretaste\Request  $request
+	 * @param \Apretaste\Request $request
 	 * @param \Apretaste\Response $response
 	 *
 	 * @throws \Framework\Alert
@@ -29,7 +27,7 @@ class Service
 	/**
 	 * Apply a coupon
 	 *
-	 * @param \Apretaste\Request  $request
+	 * @param \Apretaste\Request $request
 	 * @param \Apretaste\Response $response
 	 *
 	 * @return void
@@ -46,8 +44,8 @@ class Service
 		if (empty($coupon)) {
 			$response->setTemplate('message.ejs', [
 					'header' => 'El cupón no existe',
-					'icon'   => 'sentiment_very_dissatisfied',
-					'text'   => "El cupón insertado ($couponCode) no existe o se encuentra desactivado. Por favor revise su cupón e intente nuevamente."
+					'icon' => 'sentiment_very_dissatisfied',
+					'text' => "El cupón insertado ($couponCode) no existe o se encuentra desactivado. Por favor revise su cupón e intente nuevamente."
 			]);
 			return;
 		}
@@ -57,8 +55,8 @@ class Service
 		if ($used) {
 			$response->setTemplate('message.ejs', [
 					'header' => 'El cupón ya fue usado',
-					'icon'   => 'sentiment_very_dissatisfied',
-					'text'   => "Lo sentimos, pero el cupón insertado ($couponCode) ya fue usado por usted, y solo puede aplicarse una vez por usuario."
+					'icon' => 'sentiment_very_dissatisfied',
+					'text' => "Lo sentimos, pero el cupón insertado ($couponCode) ya fue usado por usted, y solo puede aplicarse una vez por usuario."
 			]);
 			return;
 		}
@@ -70,8 +68,8 @@ class Service
 			if ($coupon->rule_limit <= $cnt) {
 				$response->setTemplate('message.ejs', [
 						'header' => 'El cupón alcanzo su máximo',
-						'icon'   => 'sentiment_very_dissatisfied',
-						'text'   => "Este cupón ($couponCode) ha sido usado demasidas veces y ahora se encuentra desactivado."
+						'icon' => 'sentiment_very_dissatisfied',
+						'text' => "Este cupón ($couponCode) ha sido usado demasidas veces y ahora se encuentra desactivado."
 				]);
 				return;
 			}
@@ -83,8 +81,8 @@ class Service
 			if (! $newUser) {
 				$response->setTemplate('message.ejs', [
 						'header' => 'El cupón no aplica',
-						'icon'   => 'sentiment_very_dissatisfied',
-						'text'   => "Lo sentimos, pero el cupón insertado ($couponCode) solo puede aplicarse a nuevos usuarios."
+						'icon' => 'sentiment_very_dissatisfied',
+						'text' => "Lo sentimos, pero el cupón insertado ($couponCode) solo puede aplicarse a nuevos usuarios."
 				]);
 				return;
 			}
@@ -95,18 +93,20 @@ class Service
 			if (date('Y-m-d') > date('Y-m-d', strtotime($coupon->rule_deadline))) {
 				$response->setTemplate('message.ejs', [
 						'header' => 'El cupón ha expirado',
-						'icon'   => 'sentiment_very_dissatisfied',
-						'text'   => "Lo sentimos, pero el cupón insertado ($couponCode) ha expirado y no puede ser usado."
+						'icon' => 'sentiment_very_dissatisfied',
+						'text' => "Lo sentimos, pero el cupón insertado ($couponCode) ha expirado y no puede ser usado."
 				]);
 				return;
 			}
 		}
 
 		// duplicate if you are topacio level or higer
-		if($request->person->level >= Level::TOPACIO) $coupon->prize_credits *= 2;
+		if ($request->person->level >= Level::TOPACIO) {
+			$coupon->prize_credits *= 2;
+		}
 
 		// run powers for amulet CUPONESX2
-		if(Amulets::isActive(Amulets::CUPONESX2, $request->person->id)) {
+		if (Amulets::isActive(Amulets::CUPONESX2, $request->person->id)) {
 			// duplicate the amount
 			$coupon->prize_credits *= 2;
 
@@ -121,8 +121,8 @@ class Service
 		} catch (Exception $e) {
 			$response->setTemplate('message.ejs', [
 					'header' => 'Error inesperado',
-					'icon'   => 'sentiment_very_dissatisfied',
-					'text'   => 'Hemos encontrado un error. Por favor intente nuevamente, si el problema persiste, escríbanos al soporte.'
+					'icon' => 'sentiment_very_dissatisfied',
+					'text' => 'Hemos encontrado un error. Por favor intente nuevamente, si el problema persiste, escríbanos al soporte.'
 			]);
 			return;
 		}
@@ -139,8 +139,8 @@ class Service
 		// offer rewards response
 		$response->setTemplate('message.ejs', [
 				'header' => '¡Felicidades!',
-				'icon'   => 'sentiment_very_satisfied',
-				'text'   => "Su cupón se ha canjeado correctamente y usted ha ganado §{$coupon->prize_credits} en créditos de Apretaste. Gracias por canjear su cupón."
+				'icon' => 'sentiment_very_satisfied',
+				'text' => "Su cupón se ha canjeado correctamente y usted ha ganado §{$coupon->prize_credits} en créditos de Apretaste. Gracias por canjear su cupón."
 		]);
 	}
 }
