@@ -7,6 +7,7 @@ use Apretaste\Response;
 use Framework\Database;
 use Apretaste\Challenges;
 use Apretaste\Level;
+use Apretaste\Amulets;
 
 class Service
 {
