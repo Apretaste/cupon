@@ -103,7 +103,7 @@ class Service
 		}
 
 		// duplicate if you are topacio level or higer
-		if ($request->person->level >= Level::TOPACIO) {
+		if ($request->person->levelCode >= Level::TOPACIO) {
 			$coupon->prize_credits *= 2;
 		}
 
