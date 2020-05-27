@@ -122,7 +122,7 @@ class Service
 					$response->setTemplate('message.ejs', [
 					  'header' => 'Debe completar una encuesta antes',
 					  'icon' => 'sentiment_very_dissatisfied',
-					  'text' => "Para canjear el cupón $couponCode debe completar la encuesta <a href=\"#!\" onclick=\"apretaste.send({'command':'ENCUESTA VER', data: {id: '{$survey->id}'});\">{$survey->title}</a>"
+					  'text' => "Para canjear el cupón $couponCode debe completar la encuesta <a href=\"#!\" onclick=\"apretaste.send({'command':'ENCUESTA VER', data: {id: '{$survey->id}'}});\">{$survey->title}</a>"
 					]);
 
 					return;
