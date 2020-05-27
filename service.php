@@ -63,6 +63,35 @@ class Service
 			return;
 		}
 
+		// check for survey
+		if (!empty(trim($coupon->survey))) {
+
+			// search survey
+			$survey = Database::queryFirst("SELECT * FROM _survey WHERE id = {$coupon->survey}");
+
+			// maybe not exists
+			if ($survey !== NULL) {
+
+				// search answers
+				$surveyCompleted = Database::query("SELECT count(person_id) as cnt from _survey_answer_choosen 
+					WHERE survey = {$coupon->survey} AND person_id = {$request->person->id}")[0]->cnt > 0;
+
+				// if not completed
+				if (!$surveyCompleted) {
+					$response->setTemplate('message.ejs', [
+					  'header' => 'Debe completar una encuesta antes',
+					  'icon' => 'sentiment_very_dissatisfied',
+					  'text' => "Para canjear el cupón ($couponCode) debe completar la encuesta <a href=\"#!\" onclick=\"apretaste.send({'command':'ENCUESTA VER', data: {id: '{$survey->id}'});\">{$survey->title}</a>"
+					]);
+
+					return;
+				}
+			} else {
+				$alert = new Alert('500', "Encuesta del cupon $couponCode no existe");
+				$alert->post();
+			}
+		}
+
 		// check if the coupon reached the usage limit
 		$coupon = $coupon[0];
 		if ($coupon->rule_limit) {
