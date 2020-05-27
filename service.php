@@ -52,6 +52,8 @@ class Service
 			return;
 		}
 
+		$coupon = $coupon[0];
+
 		// check if the coupon has been used already by the user
 		$used = Database::query("SELECT COUNT(id) AS used FROM _cupones_used WHERE person_id='{$request->person->id}' AND coupon='$couponCode'")[0]->used;
 		if ($used) {
@@ -61,6 +63,45 @@ class Service
 					'text' => "Lo sentimos, pero el cupón insertado ($couponCode) ya fue usado por usted, y solo puede aplicarse una vez por usuario."
 			]);
 			return;
+		}
+
+		// check if the coupon reached the usage limit
+		if ($coupon->rule_limit) {
+			$cnt = Database::query("SELECT COUNT(id) AS cnt FROM _cupones_used WHERE coupon='$couponCode'")[0]->cnt;
+			if ($coupon->rule_limit <= $cnt) {
+				$response->setTemplate('message.ejs', [
+				  'header' => 'El cupón alcanzo su máximo',
+				  'icon' => 'sentiment_very_dissatisfied',
+				  'text' => "Este cupón ($couponCode) ha sido usado demasidas veces y ahora se encuentra desactivado."
+				]);
+				return;
+			}
+		}
+
+
+		// check if the new user rule can be applied
+		if ($coupon->rule_new_user) {
+			$newUser = Database::query("SELECT COUNT(email) AS newuser FROM person WHERE email = '{$request->person->email}' AND DATEDIFF(NOW(), insertion_date) < 3")[0]->newuser;
+			if (! $newUser) {
+				$response->setTemplate('message.ejs', [
+						'header' => 'El cupón no aplica',
+						'icon' => 'sentiment_very_dissatisfied',
+						'text' => "Lo sentimos, pero el cupón insertado ($couponCode) solo puede aplicarse a nuevos usuarios."
+				]);
+				return;
+			}
+		}
+
+		// check if the deadline rule can be applied
+		if ($coupon->rule_deadline) {
+			if (date('Y-m-d') > date('Y-m-d', strtotime($coupon->rule_deadline))) {
+				$response->setTemplate('message.ejs', [
+						'header' => 'El cupón ha expirado',
+						'icon' => 'sentiment_very_dissatisfied',
+						'text' => "Lo sentimos, pero el cupón insertado ($couponCode) ha expirado y no puede ser usado."
+				]);
+				return;
+			}
 		}
 
 		// check for survey
@@ -89,45 +130,6 @@ class Service
 			} else {
 				$alert = new Alert('500', "Encuesta del cupon $couponCode no existe");
 				$alert->post();
-			}
-		}
-
-		// check if the coupon reached the usage limit
-		$coupon = $coupon[0];
-		if ($coupon->rule_limit) {
-			$cnt = Database::query("SELECT COUNT(id) AS cnt FROM _cupones_used WHERE coupon='$couponCode'")[0]->cnt;
-			if ($coupon->rule_limit <= $cnt) {
-				$response->setTemplate('message.ejs', [
-						'header' => 'El cupón alcanzo su máximo',
-						'icon' => 'sentiment_very_dissatisfied',
-						'text' => "Este cupón ($couponCode) ha sido usado demasidas veces y ahora se encuentra desactivado."
-				]);
-				return;
-			}
-		}
-
-		// check if the new user rule can be applied
-		if ($coupon->rule_new_user) {
-			$newUser = Database::query("SELECT COUNT(email) AS newuser FROM person WHERE email = '{$request->person->email}' AND DATEDIFF(NOW(), insertion_date) < 3")[0]->newuser;
-			if (! $newUser) {
-				$response->setTemplate('message.ejs', [
-						'header' => 'El cupón no aplica',
-						'icon' => 'sentiment_very_dissatisfied',
-						'text' => "Lo sentimos, pero el cupón insertado ($couponCode) solo puede aplicarse a nuevos usuarios."
-				]);
-				return;
-			}
-		}
-
-		// check if the deadline rule can be applied
-		if ($coupon->rule_deadline) {
-			if (date('Y-m-d') > date('Y-m-d', strtotime($coupon->rule_deadline))) {
-				$response->setTemplate('message.ejs', [
-						'header' => 'El cupón ha expirado',
-						'icon' => 'sentiment_very_dissatisfied',
-						'text' => "Lo sentimos, pero el cupón insertado ($couponCode) ha expirado y no puede ser usado."
-				]);
-				return;
 			}
 		}
 
