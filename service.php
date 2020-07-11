@@ -39,7 +39,7 @@ class Service
 	public function _canjear(Request $request, Response &$response)
 	{
 		// get coupon from the database
-		$couponCode = strtoupper($request->input->data->coupon);
+		$couponCode = Database::escape(strtoupper($request->input->data->coupon), 20);
 		$coupon = Database::query("SELECT * FROM _cupones WHERE coupon = '$couponCode' AND active=1");
 
 		// check if coupon cannot be found
