@@ -110,8 +110,8 @@ class Service
 
 				// search answers
 				$surveyCompleted = Database::queryFirst("
-					SELECT COUNT(person_id) AS cnt FROM _survey_answer_choosen 
-					WHERE survey = {$coupon->survey} AND person_id = {$request->person->id}")->cnt > 0;
+					SELECT COUNT(*) AS cnt FROM _survey_done 
+					WHERE survey_id = {$coupon->survey} AND person_id = {$request->person->id}")->cnt > 0;
 
 				// if not completed
 				if (!$surveyCompleted) {
