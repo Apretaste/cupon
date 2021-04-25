@@ -1,5 +1,6 @@
 <?php
 
+use Apretaste\Alert;
 use Apretaste\Money;
 use Apretaste\Level;
 use Apretaste\Request;
@@ -32,6 +33,11 @@ class Service
 	 *
 	 * @param Request $request
 	 * @param Response $response
+	 * @return Response
+	 * @throws \Apretaste\Alert
+	 * @throws \Framework\Alert
+	 * @throws \Kreait\Firebase\Exception\FirebaseException
+	 * @throws \Kreait\Firebase\Exception\MessagingException
 	 * @author salvipascual
 	 */
 	public function _canjear(Request $request, Response &$response)
@@ -39,99 +45,165 @@ class Service
 		// get coupon from the database
 		$couponCode = Database::escape(strtoupper($request->input->data->coupon), 20);
 		$coupon = Database::queryFirst("SELECT * FROM _cupones WHERE coupon = '$couponCode' AND active=1");
+		$survey = null;
+		$campaignCoupon = false;
 
-		// check if coupon cannot be found
-		if (empty($coupon)) {
-			$response->setTemplate('message.ejs', [
-				'header' => 'El cupón no existe',
-				'icon' => 'sentiment_very_dissatisfied',
-				'text' => "El cupón insertado ($couponCode) no existe o se encuentra desactivado. Por favor revise su cupón e intente nuevamente."
-			]);
-			return;
-		}
-
-		// check if the coupon has been used already by the user
-		$used = Database::query("SELECT COUNT(id) AS used FROM _cupones_used WHERE person_id='{$request->person->id}' AND coupon='$couponCode'")[0]->used;
-		if ($used) {
-			$response->setTemplate('message.ejs', [
+		// response types
+		$responseUsed = function() use (&$response, $couponCode) {
+			return $response->setTemplate('message.ejs', [
 				'header' => 'El cupón ya fue usado',
 				'icon' => 'sentiment_very_dissatisfied',
 				'text' => "Lo sentimos, pero el cupón insertado ($couponCode) ya fue usado por usted, y solo puede aplicarse una vez por usuario."
 			]);
-			return;
-		}
+		};
 
-		// check if the coupon reached the usage limit
-		if ($coupon->rule_limit) {
-			$cnt = Database::query("SELECT COUNT(id) AS cnt FROM _cupones_used WHERE coupon='$couponCode'")[0]->cnt;
-			if ($coupon->rule_limit <= $cnt) {
-				$response->setTemplate('message.ejs', [
-					'header' => 'El cupón alcanzo su máximo',
-					'icon' => 'sentiment_very_dissatisfied',
-					'text' => "Este cupón ($couponCode) ha sido usado demasidas veces y ahora se encuentra desactivado."
-				]);
-				return;
-			}
-		}
+		$responseExpired = function() use (&$response, $couponCode) {
+			return $response->setTemplate('message.ejs', [
+				'header' => 'El cupón ha expirado',
+				'icon' => 'sentiment_very_dissatisfied',
+				'text' => "Lo sentimos, pero el cupón insertado ($couponCode) ha expirado y no puede ser usado."
+			]);
+		};
 
-		// check if the new user rule can be applied
-		if ($coupon->rule_new_user) {
-			$newUser = Database::query("SELECT COUNT(email) AS newuser FROM person WHERE email = '{$request->person->email}' AND DATEDIFF(NOW(), insertion_date) < 3")[0]->newuser;
-			if (! $newUser) {
-				$response->setTemplate('message.ejs', [
-					'header' => 'El cupón no aplica',
-					'icon' => 'sentiment_very_dissatisfied',
-					'text' => "Lo sentimos, pero el cupón insertado ($couponCode) solo puede aplicarse a nuevos usuarios."
-				]);
-				return;
-			}
-		}
+		$responseNotFound = function() use (&$response, $couponCode) {
+			return $response->setTemplate('message.ejs', [
+				'header' => 'El cupón no existe',
+				'icon' => 'sentiment_very_dissatisfied',
+				'text' => "El cupón insertado ($couponCode) no existe o se encuentra desactivado. Por favor revise su cupón e intente nuevamente."
+			]);
+		};
 
-		// check if the deadline rule can be applied
-		if ($coupon->rule_deadline) {
-			if (date('Y-m-d') > date('Y-m-d', strtotime($coupon->rule_deadline))) {
-				$response->setTemplate('message.ejs', [
-					'header' => 'El cupón ha expirado',
-					'icon' => 'sentiment_very_dissatisfied',
-					'text' => "Lo sentimos, pero el cupón insertado ($couponCode) ha expirado y no puede ser usado."
-				]);
-				return;
-			}
-		}
+		$responseMax = function() use (&$response, $couponCode) {
+			return $response->setTemplate('message.ejs', [
+				'header' => 'El cupón ha alcanzado su máximo',
+				'icon' => 'sentiment_very_dissatisfied',
+				'text' => "Este cupón ($couponCode) ha sido usado demasidas veces y ahora se encuentra desactivado."
+			]);
+		};
 
-		// check for survey
-		if (!empty(trim($coupon->survey))) {
+		$responseNotApplicable = function() use (&$response, $couponCode) {
+			return $response->setTemplate('message.ejs', [
+				'header' => 'El cupón no aplica',
+				'icon' => 'sentiment_very_dissatisfied',
+				'text' => "Lo sentimos, pero el cupón insertado ($couponCode) solo puede aplicarse a nuevos usuarios."
+			]);
+		};
 
-			// search survey
-			$survey = Database::queryFirst("SELECT * FROM _survey WHERE id = {$coupon->survey}");
+		$responseCompleteSurvey = function() use (&$response, $couponCode, &$survey) {
+			return $response->setTemplate('message.ejs', [
+				'header' => 'Debe completar una encuesta antes',
+				'icon' => 'sentiment_very_dissatisfied',
+				'text' => "Para canjear el cupón $couponCode debe completar la encuesta <a href=\"#!\" onclick=\"apretaste.send({'command':'ENCUESTA VER', data: {id: '{$survey->id}'}});\">{$survey->title}</a>"
+			]);
+		};
 
-			// maybe not exists
-			if ($survey !== NULL) {
+		$responseUnexpectedError = function() use (&$response, $couponCode) {
+			return $response->setTemplate('message.ejs', [
+				'header' => 'Error inesperado',
+				'icon' => 'sentiment_very_dissatisfied',
+				'text' => 'Hemos encontrado un error. Por favor intente nuevamente, si el problema persiste, escríbanos al soporte.'
+			]);
+		};
 
-				// search answers
-				$surveyCompleted = Database::queryFirst("
-					SELECT COUNT(*) AS cnt FROM _survey_done 
-					WHERE survey_id = {$coupon->survey} AND person_id = {$request->person->id}")->cnt > 0;
+		$responseSuccess = function() use (&$response, $couponCode, &$coupon) {
+			return $response->setTemplate('message.ejs', [
+				'header' => '¡Felicidades!',
+				'icon' => 'sentiment_very_satisfied',
+				'text' => "Su cupón se ha canjeado correctamente y usted ha ganado §{$coupon->prize_credits} en créditos de Apretaste. Gracias por canjear su cupón."
+			]);
+		};
 
-				// if not completed
-				if (!$surveyCompleted) {
-					$response->setTemplate('message.ejs', [
-					  'header' => 'Debe completar una encuesta antes',
-					  'icon' => 'sentiment_very_dissatisfied',
-					  'text' => "Para canjear el cupón $couponCode debe completar la encuesta <a href=\"#!\" onclick=\"apretaste.send({'command':'ENCUESTA VER', data: {id: '{$survey->id}'}});\">{$survey->title}</a>"
-					]);
+		// check if coupon cannot be found
+		if (empty($coupon)) {
 
-					return;
+			// campaign/individual coupons?
+			$coupon = Database::queryFirst("
+						SELECT *, 1 as prize_credits,
+						       IF(coupon_used is NULl,0,1) used, 
+						       IF(coupon_expire < now(), 0, 1) as expired 
+						FROM campaign_processed 
+						WHERE coupon = '$couponCode' 
+						  AND person_id = {$request->person->id} 
+						  AND coupon_expire < now() 
+						  AND coupon_used is NULL;");
+
+			// is a individual coupon
+			if (!empty($coupon)) {
+				$campaignCoupon = true;
+
+				// used coupon
+				if ((int) $coupon->used === 1) {
+					return $responseUsed();
+				}
+
+				// expired coupon
+				if ((int) $coupon->expired === 1) {
+					return $responseExpired();
 				}
 			} else {
-				$alert = new Alert('500', "Encuesta del cupon $couponCode no existe");
-				$alert->post();
+				return $responseNotFound();
 			}
 		}
 
-		// duplicate if you are topacio level or higer
-		if ($request->person->levelCode >= Level::TOPACIO) {
-			$coupon->prize_credits *= 2;
+		if (!$campaignCoupon)
+		{
+			// check if the coupon has been used already by the user
+			$used = Database::query("SELECT COUNT(id) AS used FROM _cupones_used WHERE person_id='{$request->person->id}' AND coupon='$couponCode'")[0]->used;
+			if ($used) {
+				return $responseUsed();
+			}
+
+			// check if the coupon reached the usage limit
+			if ($coupon->rule_limit) {
+				$cnt = Database::query("SELECT COUNT(id) AS cnt FROM _cupones_used WHERE coupon='$couponCode'")[0]->cnt;
+				if ($coupon->rule_limit <= $cnt) {
+					return $responseMax();
+				}
+			}
+
+			// check if the new user rule can be applied
+			if ($coupon->rule_new_user) {
+				$newUser = Database::query("SELECT COUNT(email) AS newuser FROM person WHERE email = '{$request->person->email}' AND DATEDIFF(NOW(), insertion_date) < 3")[0]->newuser;
+				if (!$newUser) {
+					return $responseNotApplicable();
+				}
+			}
+
+			// check if the deadline rule can be applied
+			if ($coupon->rule_deadline) {
+				if (date('Y-m-d') > date('Y-m-d', strtotime($coupon->rule_deadline))) {
+					return $responseExpired();
+				}
+			}
+
+			// check for survey
+			if (!empty(trim($coupon->survey))) {
+
+				// search survey
+				$survey = Database::queryFirst("SELECT * FROM _survey WHERE id = {$coupon->survey}");
+
+				// maybe not exists
+				if (!empty($survey)) {
+
+					// search answers
+					$surveyCompleted = Database::queryFirst("
+							SELECT COUNT(*) AS cnt FROM _survey_done 
+							WHERE survey_id = {$coupon->survey} AND person_id = {$request->person->id}")->cnt > 0;
+
+					// if not completed
+					if (!$surveyCompleted) {
+						return $responseCompleteSurvey();
+					}
+				} else {
+					$alert = new Alert('500', "Encuesta del cupon $couponCode no existe");
+					$alert->post();
+				}
+			}
+
+			// duplicate if you are topacio level or higer
+			if ($request->person->levelCode >= Level::TOPACIO) {
+				$coupon->prize_credits *= 2;
+			}
 		}
 
 		// run powers for amulet CUPONESX2
@@ -148,16 +220,16 @@ class Service
 		try {
 			Money::send(Money::BANK, $request->person->id, $coupon->prize_credits, "Canjeo del cupón $couponCode");
 		} catch (Exception $e) {
-			$response->setTemplate('message.ejs', [
-				'header' => 'Error inesperado',
-				'icon' => 'sentiment_very_dissatisfied',
-				'text' => 'Hemos encontrado un error. Por favor intente nuevamente, si el problema persiste, escríbanos al soporte.'
-			]);
-			return;
+			return $responseUnexpectedError();
 		}
 
-		// create coupon record in the database
-		Database::query("INSERT INTO _cupones_used (coupon, person_id) VALUES ('$couponCode', {$request->person->id})");
+		// set coupon as used
+		if ($campaignCoupon) {
+			Database::query("UPDATE campaign_processed SET coupon_used = now() WHERE campaign = {$coupon->campaign} AND coupon = '$couponCode' and person_id = {$request->person->id} LIMIT 1");
+			Database::query("UPDATE campaign SET coupon_used = coupon_used + 1 WHERE id = {$coupon->campaign};");
+		} else {
+			Database::query("INSERT INTO _cupones_used (coupon, person_id) VALUES ('$couponCode', {$request->person->id})");
+		}
 
 		// add the experience
 		Level::setExperience('COUPON_EXCHANGE', $request->person->id);
@@ -165,14 +237,14 @@ class Service
 		// complete the challenge
 		Challenges::complete('cupon', $request->person->id);
 
-		// submit to Google Analytics 
-		GoogleAnalytics::event('cupon_complete', $couponCode);
+		// submit to Google Analytics
+		if ($campaignCoupon) {
+			GoogleAnalytics::event('cupon_complete', 'CAMPAIGN'.$coupon->campaign);
+		} else {
+			GoogleAnalytics::event('cupon_complete', $couponCode);
+		}
 
 		// offer rewards response
-		$response->setTemplate('message.ejs', [
-			'header' => '¡Felicidades!',
-			'icon' => 'sentiment_very_satisfied',
-			'text' => "Su cupón se ha canjeado correctamente y usted ha ganado §{$coupon->prize_credits} en créditos de Apretaste. Gracias por canjear su cupón."
-		]);
+		return $responseSuccess();
 	}
 }
