@@ -120,11 +120,11 @@ class Service
 			$coupon = Database::queryFirst("
 						SELECT *, 1 as prize_credits,
 						       IF(coupon_used is NULl,0,1) used, 
-						       IF(coupon_expire < now(), 0, 1) as expired 
+						       IF(coupon_expire > now(), 0, 1) as expired 
 						FROM campaign_processed 
 						WHERE coupon = '$couponCode' 
 						  AND person_id = {$request->person->id} 
-						  AND coupon_expire < now() 
+						  AND coupon_expire > now() 
 						  AND coupon_used is NULL;");
 
 			// is a individual coupon
