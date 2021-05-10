@@ -197,11 +197,11 @@ class Service
 					$alert->post();
 				}
 			}
+		}
 
-			// duplicate if you are topacio level or higer
-			if ($request->person->levelCode >= Level::TOPACIO) {
-				$coupon->prize_credits *= 2;
-			}
+		// duplicate if you are topacio level or higer
+		if ($request->person->levelCode >= Level::TOPACIO) {
+			$coupon->prize_credits *= 2;
 		}
 
 		// run powers for amulet CUPONESX2
