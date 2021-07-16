@@ -1,9 +1,11 @@
 {
 	"name": "cupones",
-	"description": "Aplica cupones y gana excelentes premios.",
+	"caption": "Cupones",
+	"icon": "fas fa-tags",
+	"description": "Aplica cupones y gana créditos de Apretaste.",
 	"category": "otros",
 	"creator": "salvi@apretaste.org",
 	"listed": true,
-	"guest": true,
-	"caption": "Cupones"
+	"ads": true,
+	"guest": true
 }
